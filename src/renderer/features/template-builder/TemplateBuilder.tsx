@@ -124,14 +124,18 @@ export function TemplateBuilder() {
       return { error: 'Add at least one field before creating the template.' }
     }
     const dict: Record<string, string> = {}
-    const seen = new Set<string>()
+    const usedKeys = new Set<string>()
     for (const row of fieldRows) {
       const name = row.name.trim()
       if (!name) return { error: 'Every field needs a name.' }
-      const key = name.toLowerCase()
-      if (seen.has(key)) return { error: `Field names must be unique ("${name}" appears more than once).` }
-      seen.add(key)
-      dict[name] = normalizeFieldType(row.type)
+      let uniqueName = name
+      let counter = 2
+      while (usedKeys.has(uniqueName.toLowerCase())) {
+        uniqueName = `${name}_${counter}`
+        counter++
+      }
+      usedKeys.add(uniqueName.toLowerCase())
+      dict[uniqueName] = normalizeFieldType(row.type)
     }
     return { value: dict }
   }
