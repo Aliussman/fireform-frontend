@@ -130,7 +130,6 @@ export function WeatherModal({ isOpen, onClose, onAgree, initialLatitude, initia
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialLatitude !== undefined) setLatitude(String(initialLatitude))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialLongitude !== undefined) setLongitude(String(initialLongitude))
   }, [initialLatitude, initialLongitude])
 
