@@ -7,6 +7,8 @@ interface AppStore {
   selectedFillIds: number[]
   activeTab: string
   previewPath: string
+  activeTemplateId: number | null
+  selectedFieldKey: string | null
 
   setTemplates: (templates: Template[]) => void
   upsertTemplate: (template: Template) => void
@@ -15,13 +17,17 @@ interface AppStore {
   addFillSelection: (id: number) => void
   setActiveTab: (tab: string) => void
   setPreviewPath: (path: string) => void
+  setActiveTemplateId: (id: number | null) => void
+  setSelectedFieldKey: (key: string | null) => void
 }
 
 export const useStore = create<AppStore>((set, get) => ({
   templates: loadTemplates(),
   selectedFillIds: [],
-  activeTab: 'fillForm',
+  activeTab: 'studio',
   previewPath: loadLastOutputPath() || '',
+  activeTemplateId: null,
+  selectedFieldKey: null,
 
   setTemplates: (templates) => {
     saveTemplates(templates)
@@ -72,4 +78,6 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setActiveTab: (activeTab) => set({ activeTab }),
   setPreviewPath: (previewPath) => set({ previewPath }),
+  setActiveTemplateId: (activeTemplateId) => set({ activeTemplateId }),
+  setSelectedFieldKey: (selectedFieldKey) => set({ selectedFieldKey }),
 }))

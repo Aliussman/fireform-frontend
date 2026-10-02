@@ -15,24 +15,32 @@
     "lint:strict": "eslint src --max-warnings 0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^8.71.0",
     "@typescript-eslint/parser": "^8.71.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.6.1",
     "electron": "^35.0.0",
     "electron-builder": "^26.0.0",
     "electron-vite": "^2.1.0",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.3.3",
     "vite": "^5.1.0"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.50.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "tailwind-merge": "^3.7.0",
     "zustand": "^4.5.1"
   }
 }

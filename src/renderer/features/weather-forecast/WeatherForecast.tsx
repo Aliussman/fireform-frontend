@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react'
+import {
+  CloudSun,
+  X,
+  RotateCw,
+  Send,
+} from 'lucide-react'
 import { fetchWeatherForecast } from '../../lib/api'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Badge } from '../../components/ui/badge'
+import { cn } from '../../lib/utils'
 
 // ─── Field catalogue ────────────────────────────────────────────────────────
 
@@ -58,55 +68,48 @@ const FIELD_CATALOGUE = [
     unit: '°C',
     description: 'Soil temperature at the surface',
   },
-  {
-    key: 'uv_index',
-    label: 'UV Index',
-    unit: '',
-    description: 'UV index (clear sky)',
-  },
 ] as const
 
-type FieldKey = typeof FIELD_CATALOGUE[number]['key']
-
-// ─── Result types ────────────────────────────────────────────────────────────
-
-type HourlyData = { date: string[] } & Partial<Record<FieldKey, number[]>>
+type FieldKey = (typeof FIELD_CATALOGUE)[number]['key']
 
 interface WeatherResult {
   latitude: number
   longitude: number
-  elevation: number
-  hourly: HourlyData
+  hourly?: {
+    time?: string[]
+    [key: string]: unknown
+  }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+function serializeWeatherData(
+  data: WeatherResult,
+  activeFields: Array<(typeof FIELD_CATALOGUE)[number]>
+): string {
+  if (!data.hourly || !Array.isArray(data.hourly.time)) {
+    return 'No hourly data returned.'
+  }
 
-function fmt(val: number | undefined, unit: string): string {
-  if (val === undefined || val === null || Number.isNaN(val)) return '—'
-  return `${val.toFixed(1)}${unit ? '\u202f' + unit : ''}`
-}
+  const times = data.hourly.time
+  let text = `Latitude: ${data.latitude}, Longitude: ${data.longitude}\n`
+  text += `Recorded hourly metrics:\n`
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-function serializeWeatherData(result: WeatherResult, activeFields: typeof FIELD_CATALOGUE[number][]): string {
-  let text = `Weather Forecast at coordinates (${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}), Elevation: ${result.elevation}m:\n`
-  result.hourly.date.forEach((dateStr, i) => {
-    const formattedTime = formatDate(dateStr)
-    const values = activeFields.map(f => {
-      const val = result.hourly[f.key]?.[i]
-      return `${f.label}: ${fmt(val, f.unit)}`
-    }).join(', ')
+  times.forEach((t: string, idx: number) => {
+    const formattedTime = t.replace('T', ' ')
+    const values = activeFields
+      .map(f => {
+        const val = (data.hourly?.[f.key] as (number | null)[])?.[idx]
+        if (val === null || val === undefined) return `${f.label}: N/A`
+        return `${f.label}: ${val} ${f.unit}`
+      })
+      .join(', ')
     text += `[${formattedTime}] ${values}\n`
   })
   return text
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Modal / Standalone Component ──────────────────────────────────────────
 
-interface WeatherModalProps {
+export interface WeatherModalProps {
   isOpen: boolean
   onClose: () => void
   onAgree: (weatherText: string) => void
@@ -114,7 +117,13 @@ interface WeatherModalProps {
   initialLongitude?: number
 }
 
-export function WeatherModal({ isOpen, onClose, onAgree, initialLatitude, initialLongitude }: WeatherModalProps) {
+export function WeatherModal({
+  isOpen,
+  onClose,
+  onAgree,
+  initialLatitude,
+  initialLongitude,
+}: WeatherModalProps) {
   const [latitude, setLatitude] = useState(initialLatitude ? String(initialLatitude) : '')
   const [longitude, setLongitude] = useState(initialLongitude ? String(initialLongitude) : '')
   const [startDate, setStartDate] = useState('')
@@ -161,38 +170,36 @@ export function WeatherModal({ isOpen, onClose, onAgree, initialLatitude, initia
     setStatus({ message: '', type: '' })
 
     if (selected.size === 0) {
-      setStatus({ message: 'Please select at least one field.', type: 'error' })
+      setStatus({ message: 'Please select at least one weather metric.', type: 'error' })
       return
     }
 
     const lat = parseFloat(latitude)
     const lon = parseFloat(longitude)
     const start = startDate
-    const end = endDate
+    const end = sameDay ? startDate : endDate
 
     if (isNaN(lat) || isNaN(lon)) {
       setStatus({ message: 'Latitude and Longitude must be valid numbers.', type: 'error' })
       return
     }
 
-    if (start === '' || end === '') {
-      console.log('start', start)
-      console.log('end', end)
-      setStatus({ message: 'Start Date and End Date must be valid.', type: 'error' })
+    if (!start || (!sameDay && !end)) {
+      setStatus({ message: 'Please specify start and end dates.', type: 'error' })
       return
     }
 
-    if (start > end) {
-      setStatus({ message: 'Start Date must be before End Date.', type: 'error' })
+    if (!sameDay && start > end) {
+      setStatus({ message: 'Start date must be before end date.', type: 'error' })
       return
     }
 
     try {
       setLoading(true)
-      setStatus({ message: 'Fetching weather data…', type: 'info' })
+      setStatus({ message: 'Querying Open-Meteo meteorological database…', type: 'info' })
       const data = await fetchWeatherForecast(lat, lon, start, end, Array.from(selected))
       setResult(data as unknown as WeatherResult)
-      setStatus({ message: 'Weather data retrieved successfully.', type: 'success' })
+      setStatus({ message: 'Weather metrics retrieved successfully.', type: 'success' })
     } catch (err: unknown) {
       setStatus({ message: (err as Error).message, type: 'error' })
     } finally {
@@ -211,201 +218,260 @@ export function WeatherModal({ isOpen, onClose, onAgree, initialLatitude, initia
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content weather-modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
-          &times;
-        </button>
-
-        <div className="modal-body">
-          {/* ── Header ── */}
-          <div className="weather-header">
+    <div
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 select-none"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl border border-zinc-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center">
+              <CloudSun className="w-4 h-4 text-amber-300" />
+            </div>
             <div>
-              <h2>Weather History & Forecast</h2>
-              <p className="helper">
-                Enter coordinates and choose which hourly variables to download via Open-Meteo.
+              <h2 className="text-sm font-bold text-zinc-900">Historical & Live Weather Intelligence</h2>
+              <p className="text-[11px] text-zinc-500">
+                Retrieve temperature, wind, humidity and precipitation from Open-Meteo.
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-          {/* ── Coordinate inputs ── */}
-          <form className="stacked-form" onSubmit={handleSubmit}>
-            <div className="grid-2" style={{ margin: '10px 0 0 0' }}>
+        {/* Scrollable Form Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Coordinates Grid */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="wf-latitude">Latitude</label>
-                <input
-                  id="wf-latitude"
+                <label className="text-[10px] uppercase font-mono text-zinc-500 font-bold block mb-1">
+                  Latitude
+                </label>
+                <Input
                   type="number"
-                  step=".001"
-                  placeholder="e.g. 41.3851"
+                  step=".0001"
+                  placeholder="e.g. 40.7128"
                   required
                   value={latitude}
                   onChange={e => setLatitude(e.target.value)}
+                  className="font-mono text-xs"
                 />
               </div>
               <div>
-                <label htmlFor="wf-longitude">Longitude</label>
-                <input
-                  id="wf-longitude"
+                <label className="text-[10px] uppercase font-mono text-zinc-500 font-bold block mb-1">
+                  Longitude
+                </label>
+                <Input
                   type="number"
-                  step=".001"
-                  placeholder="e.g. 2.1734"
+                  step=".0001"
+                  placeholder="e.g. -74.0060"
                   required
                   value={longitude}
                   onChange={e => setLongitude(e.target.value)}
+                  className="font-mono text-xs"
                 />
               </div>
             </div>
 
-            {/* ── Field selector ── */}
-            <div className="field-selector-section">
-              <div className="field-selector-header">
-                <div className="grid-2" style={{ display: "flex", gap: "10px", margin: '10px 0 10px 0' }}>
-                  <div>
-                    <label htmlFor="wf-from">From</label>
-                    <input
-                      id="wf-from"
-                      aria-label="Date"
-                      type="date"
-                      value={startDate}
-                      onChange={e => {
-                        const newDate = e.target.value
-                        setStartDate(newDate)
-                        if (sameDay) {
-                          setEndDate(newDate)
-                        }
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <label htmlFor="wf-to">To</label>
-                      <label style={{ fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'normal', color: 'var(--text-color)' }}>
-                        <input
-                          type="checkbox"
-                          checked={sameDay}
-                          onChange={e => {
-                            const checked = e.target.checked
-                            setSameDay(checked)
-                            if (checked) setEndDate(startDate)
-                          }}
-                          style={{ margin: 0, width: 'auto' }}
-                        />
-                        Same day
-                      </label>
-                    </div>
-                    <input
-                      id="wf-to"
-                      aria-label="Date"
-                      type="date"
-                      value={endDate}
-                      onChange={e => setEndDate(e.target.value)}
-                      disabled={sameDay}
-                    />
-                  </div>
-                </div>
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] uppercase font-mono text-zinc-500 font-bold block mb-1">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-mono text-zinc-500 font-bold block mb-1">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  disabled={sameDay}
+                  required={!sameDay}
+                  value={sameDay ? startDate : endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+            </div>
 
-                <div className="field-selector-actions" style={{ margin: '20px 0 10px 0', display: "flex", gap: "10px" }}>
-                  <button type="button" className="selector-ctrl-btn" onClick={selectAll}>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="sameDayCheckbox"
+                checked={sameDay}
+                onChange={e => setSameDay(e.target.checked)}
+                className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+              />
+              <label htmlFor="sameDayCheckbox" className="text-xs text-zinc-700 cursor-pointer">
+                Single day lookup (start and end date are the same)
+              </label>
+            </div>
+
+            {/* Weather Metrics Checklist */}
+            <div className="border border-zinc-200 rounded-lg p-3 bg-zinc-50/50 space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-zinc-200">
+                <span className="text-[10px] uppercase font-mono text-zinc-500 font-bold">
+                  Select Weather Variables ({selected.size} of {FIELD_CATALOGUE.length})
+                </span>
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    className="text-[11px] text-zinc-600 hover:text-zinc-950 underline font-medium"
+                  >
                     Select all
                   </button>
-                  <button type="button" className="selector-ctrl-btn" onClick={deselectAll}>
-                    Clear all
+                  <span className="text-zinc-300">•</span>
+                  <button
+                    type="button"
+                    onClick={deselectAll}
+                    className="text-[11px] text-zinc-600 hover:text-zinc-950 underline font-medium"
+                  >
+                    Deselect all
                   </button>
                 </div>
               </div>
-              <div className="tabs">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {FIELD_CATALOGUE.map(field => {
-                  const active = selected.has(field.key)
+                  const isChecked = selected.has(field.key)
                   return (
-                    <button
+                    <label
                       key={field.key}
-                      type="button"
-                      className={`tab${active ? ' active' : ''}`}
-                      onClick={() => toggleField(field.key)}
-                      title={field.description}
-                      aria-pressed={active}
+                      className={cn(
+                        'flex items-center gap-2 p-1.5 rounded border text-xs cursor-pointer transition-colors',
+                        isChecked
+                          ? 'bg-white border-zinc-400 font-medium text-zinc-950 shadow-xs'
+                          : 'bg-transparent border-transparent text-zinc-500 hover:bg-zinc-100'
+                      )}
                     >
-                      {field.label}
-                      {field.unit && <span className="tab-unit"> ({field.unit})</span>}
-                    </button>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleField(field.key)}
+                        className="rounded border-zinc-300 text-zinc-900"
+                      />
+                      <span className="truncate flex-1">{field.label}</span>
+                      <span className="font-mono text-[10px] text-zinc-400">{field.unit}</span>
+                    </label>
                   )
                 })}
               </div>
-              <p className="helper">
-                {selected.size === 0
-                  ? 'No fields selected — select at least one.'
-                  : `${selected.size} / ${FIELD_CATALOGUE.length} field${selected.size === 1 ? '' : 's'} selected`}
-              </p>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={loading || selected.size === 0}
-              style={{ margin: '10px 0 0 0' }}
+              disabled={loading}
+              className="w-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs h-9 font-semibold"
             >
-              {loading ? 'Fetching…' : 'Get Weather'}
-            </button>
+              {loading ? (
+                <>
+                  <RotateCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Fetching Meteorological Data…
+                </>
+              ) : (
+                <>
+                  <CloudSun className="w-3.5 h-3.5 mr-1.5" />
+                  Fetch Weather History
+                </>
+              )}
+            </Button>
           </form>
 
-          {/* ── Status line ── */}
-          <p className={`status${status.type ? ` ${status.type}` : ''}`} aria-live="polite">
-            {status.message}
-          </p>
+          {/* Status Message */}
+          {status.message && (
+            <div
+              className={`p-2.5 rounded-md text-xs flex items-center gap-2 ${
+                status.type === 'error'
+                  ? 'bg-red-50 border border-red-200 text-red-700'
+                  : status.type === 'success'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-zinc-100 border border-zinc-200 text-zinc-700'
+              }`}
+            >
+              <span>{status.message}</span>
+            </div>
+          )}
 
-          {/* ── Results table ── */}
-          {result && (
-            <div className="weather-results-container">
-              <div className="weather-results">
-                {/* Meta strip */}
-                <div className="weather-meta-strip">
-                  <span>{result.latitude.toFixed(4)}°N, {result.longitude.toFixed(4)}°E</span>
-                  <span>{result.elevation.toFixed(0)} m asl</span>
-                </div>
+          {/* Weather Results Preview */}
+          {result && result.hourly && (
+            <div className="space-y-2 border border-zinc-200 rounded-lg p-3 bg-zinc-50">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase font-mono text-zinc-800">
+                  Retrieved Hourly Timeline ({result.hourly.time?.length ?? 0} data points)
+                </span>
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {activeFields.length} metrics
+                </Badge>
+              </div>
 
-                <div className="weather-table-wrap">
-                  <table className="weather-table">
-                    <thead>
-                      <tr>
-                        <th>Date &amp; Time</th>
-                        {activeFields.map(f => (
-                          <th key={f.key}>
-                            {f.label}
-                            {f.unit && <span className="th-unit"> ({f.unit})</span>}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.hourly.date.map((dateStr, i) => (
-                        <tr key={dateStr}>
-                          <td className="time-cell">{formatDate(dateStr)}</td>
-                          {activeFields.map(f => (
-                            <td key={f.key} className="data-cell">
-                              {fmt(result.hourly[f.key]?.[i], f.unit)}
-                            </td>
-                          ))}
-                        </tr>
+              <div className="max-h-48 overflow-auto border border-zinc-200 rounded bg-white">
+                <table className="w-full text-left text-[11px]">
+                  <thead className="bg-zinc-100 border-b border-zinc-200 text-zinc-600 font-mono text-[10px]">
+                    <tr>
+                      <th className="p-2">Timestamp</th>
+                      {activeFields.map(f => (
+                        <th key={f.key} className="p-2 whitespace-nowrap">
+                          {f.label} ({f.unit})
+                        </th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 font-mono text-[11px]">
+                    {result.hourly.time?.slice(0, 12).map((t, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-50">
+                        <td className="p-2 font-semibold text-zinc-700">{t.replace('T', ' ')}</td>
+                        {activeFields.map(f => {
+                          const val = (result.hourly?.[f.key] as (number | null)[])?.[idx]
+                          return (
+                            <td key={f.key} className="p-2 text-zinc-900">
+                              {val !== null && val !== undefined ? val : '—'}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
         </div>
 
-        {/* Fixed Footer for Agree/Disagree Actions */}
-        {result && (
-          <div className="modal-footer">
-            <button type="button" className="primary-btn" onClick={handleAgree} style={{ flex: 1 }}>
-              Attach Data to Form
-            </button>
-            <button type="button" className="secondary-btn" onClick={onClose} style={{ flex: 1 }}>
-              Discard
-            </button>
-          </div>
-        )}
+        {/* Footer Actions */}
+        <div className="p-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={onClose} className="bg-white text-xs">
+            Close
+          </Button>
+
+          {result && (
+            <Button
+              onClick={handleAgree}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8 shadow-xs"
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Insert Weather into Incident Narrative
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
