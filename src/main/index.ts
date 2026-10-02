@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { spawn, ChildProcess } from 'child_process'
+import type { ChildProcess } from 'child_process';
+import { spawn } from 'child_process'
 
 let backendProcess: ChildProcess | null = null
 

@@ -1,5 +1,5 @@
 import { API_BASE_URL, DEFAULT_TEMPLATE_DIRECTORY } from './constants'
-import { Template } from '../types'
+import type { Template } from '../types'
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
   const text = await response.text()

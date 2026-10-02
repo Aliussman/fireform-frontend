@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { deleteTemplate } from './api'
-import { Template } from '../types'
+import type { Template } from '../types'
 
 /**
  * Shared delete flow for templates, used by both the Templates page and the

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { FieldRow } from '../../types'
+import type { FieldRow } from '../../types'
 import { normalizeFieldType } from '../../lib/utils'
 
 export function useFieldRows() {

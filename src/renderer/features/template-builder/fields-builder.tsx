@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { FieldRow } from '../../types'
+import type { FieldRow } from '../../types'
 import { FIELD_TYPES } from '../../lib/constants'
 
 interface FieldsBuilderProps {

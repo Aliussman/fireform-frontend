@@ -1,4 +1,5 @@
-import { ReactNode, useEffect } from 'react'
+import type { ReactNode} from 'react';
+import { useEffect } from 'react'
 
 export function TrashIcon({ size = 16 }: { size?: number }) {
   return (

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import { TYPE_VALUE_TO_LABEL } from '../../lib/constants'
 import { pluralize } from '../../lib/utils'
-import { loadTemplatesView, saveTemplatesView, TemplatesView } from '../../lib/storage'
+import type { TemplatesView } from '../../lib/storage';
+import { loadTemplatesView, saveTemplatesView } from '../../lib/storage'
 import { useDeleteTemplate } from '../../lib/useDeleteTemplate'
 import { ConfirmDialog, TrashIcon } from '../../components/ConfirmDialog'
 

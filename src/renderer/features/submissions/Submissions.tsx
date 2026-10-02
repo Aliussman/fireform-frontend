@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../../store'
-import { fetchSubmissions, fetchAnalytics, FormSubmissionData, AnalyticsData } from '../../lib/api'
+import type { FormSubmissionData, AnalyticsData } from '../../lib/api';
+import { fetchSubmissions, fetchAnalytics } from '../../lib/api'
 export function Submissions() {
     const { setActiveTab, setPreviewPath } = useStore(s => ({
         setActiveTab: s.setActiveTab,
@@ -27,6 +28,7 @@ export function Submissions() {
         }
     }
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadData()
     }, [])
     const handleViewPdf = (pdfPath: string) => {

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Template } from '../types'
+import type { Template } from '../types'
 import { loadTemplates, saveTemplates, loadLastOutputPath } from '../lib/storage'
 
 interface AppStore {

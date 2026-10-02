@@ -20,7 +20,7 @@ export function TemplateBuilder() {
     setPreviewPath: s.setPreviewPath,
   }))
 
-  const { fieldRows, addRow, removeRow, updateRow, moveRow, seedFromApiFields, resetRows } =
+  const { fieldRows, addRow, removeRow, updateRow, moveRow, seedFromApiFields } =
     useFieldRows()
 
   const [templateName, setTemplateName] = useState('')

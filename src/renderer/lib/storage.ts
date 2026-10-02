@@ -1,4 +1,4 @@
-import { Template } from '../types'
+import type { Template } from '../types'
 
 const TEMPLATES_KEY = 'fireform.templates.v1'
 const LAST_OUTPUT_KEY = 'fireform.lastOutputPath.v1'

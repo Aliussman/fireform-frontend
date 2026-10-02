@@ -4,7 +4,7 @@ import { useSpeechRecording } from './hooks'
 import { fillTemplate, fetchModels } from '../../lib/api'
 import { saveLastOutputPath } from '../../lib/storage'
 import { pluralize } from '../../lib/utils'
-import { TYPE_VALUE_TO_LABEL } from '../../lib/constants'
+
 import { WeatherModal } from '../weather-forecast/WeatherForecast'
 import { ZipcodeModal } from '../zipcode-resolver/ZipcodeResolver'
 import { useDeleteTemplate } from '../../lib/useDeleteTemplate'
