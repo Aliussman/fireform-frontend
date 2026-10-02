@@ -36,7 +36,9 @@ export const useStore = create<AppStore>((set, get) => ({
       name: template.name || '',
       pdf_path: template.pdf_path || '',
       fields: template.fields || {},
+      field_count: template.field_count,
     }
+
     const templates = get().templates
     const index = templates.findIndex(t => t.id === normalized.id)
     const updated =

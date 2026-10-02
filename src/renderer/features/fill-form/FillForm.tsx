@@ -184,8 +184,14 @@ export function FillForm() {
           <div className="template-tiles">
             {templates.map(template => {
               const selected = selectedFillIds.includes(template.id)
-              const fieldCount = Object.keys(template.fields || {}).length
+              const fieldCount =
+                typeof template.field_count === 'number'
+                  ? template.field_count
+                  : template.fields?.schema?.properties
+                    ? Object.keys(template.fields.schema.properties).length
+                    : Object.keys(template.fields || {}).length
               return (
+
                 <div
                   key={template.id}
                   className={`template-tile${selected ? ' selected' : ''}`}

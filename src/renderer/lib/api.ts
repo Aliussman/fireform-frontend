@@ -48,14 +48,15 @@ export async function fetchTemplates(): Promise<Template[]> {
     id: t['id'] as number,
     name: (t['name'] as string) || '',
     pdf_path: (t['pdf_path'] as string) || '',
-    fields: (t['fields'] as Record<string, string>) || {},
+    fields: (t['fields'] as Record<string, any>) || {},
+    field_count: typeof t['field_count'] === 'number' ? (t['field_count'] as number) : undefined,
   }))
 }
 
 export async function createTemplate(payload: {
   name: string
   pdf_path: string
-  fields: Record<string, string>
+  fields?: Record<string, any>
 }): Promise<Record<string, unknown>> {
   const response = await fetch(`${API_BASE_URL}/templates/create`, {
     method: 'POST',
@@ -66,6 +67,7 @@ export async function createTemplate(payload: {
   if (!response.ok) throw new Error(extractErrorMessage(body, response.status))
   return body as Record<string, unknown>
 }
+
 
 export async function uploadTemplatePdf(
   file: File,

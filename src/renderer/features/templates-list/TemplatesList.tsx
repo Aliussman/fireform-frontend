@@ -6,6 +6,36 @@ import { loadTemplatesView, saveTemplatesView, TemplatesView } from '../../lib/s
 import { useDeleteTemplate } from '../../lib/useDeleteTemplate'
 import { ConfirmDialog, TrashIcon } from '../../components/ConfirmDialog'
 
+function getFieldEntries(fields: Record<string, any> = {}): Array<{ name: string; type: string }> {
+  if (fields.schema && typeof fields.schema === 'object') {
+    const props = (fields.schema as Record<string, any>).properties || {}
+    const entries: Array<{ name: string; type: string }> = []
+    for (const [key, prop] of Object.entries(props)) {
+      if (prop && typeof prop === 'object') {
+        const p = prop as { type?: string; description?: string; items?: { properties?: Record<string, { description?: string; type?: string }> } }
+        if (p.type === 'array' && p.items?.properties) {
+          for (const [colKey, colProp] of Object.entries(p.items.properties)) {
+            entries.push({
+              name: colProp.description || `${key}.${colKey}`,
+              type: 'Table Column',
+            })
+          }
+        } else {
+          entries.push({
+            name: p.description || key,
+            type: p.type === 'enum' ? 'Choice' : p.type || 'Text',
+          })
+        }
+      }
+    }
+    return entries
+  }
+  return Object.entries(fields).map(([name, type]) => ({
+    name,
+    type: typeof type === 'string' ? (TYPE_VALUE_TO_LABEL[type] || type) : 'Text',
+  }))
+}
+
 export function TemplatesList() {
   const { templates, addFillSelection, setActiveTab, setPreviewPath } = useStore(s => ({
     templates: s.templates,
@@ -97,7 +127,8 @@ export function TemplatesList() {
       ) : view === 'grid' ? (
         <div className="template-tiles">
           {templates.map(template => {
-            const fieldCount = Object.keys(template.fields || {}).length
+            const entries = getFieldEntries(template.fields)
+            const fieldCount = typeof template.field_count === 'number' ? template.field_count : entries.length
             return (
               <div
                 key={template.id}
@@ -149,7 +180,7 @@ export function TemplatesList() {
       ) : (
         <div className="template-list">
           {templates.map(template => {
-            const entries = Object.entries(template.fields || {})
+            const entries = getFieldEntries(template.fields)
             return (
               <article
                 key={template.id}
@@ -196,15 +227,16 @@ export function TemplatesList() {
                         <td colSpan={2}>No fields.</td>
                       </tr>
                     ) : (
-                      entries.map(([name, type]) => (
-                        <tr key={name}>
-                          <td>{name}</td>
-                          <td>{TYPE_VALUE_TO_LABEL[type] || 'Text'}</td>
+                      entries.map((entry, idx) => (
+                        <tr key={idx}>
+                          <td>{entry.name}</td>
+                          <td>{entry.type}</td>
                         </tr>
                       ))
                     )}
                   </tbody>
                 </table>
+
 
                 <div className="card-actions">
                   <button
