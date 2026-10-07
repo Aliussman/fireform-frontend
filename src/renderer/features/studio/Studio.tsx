@@ -179,6 +179,7 @@ export function Studio() {
 
       const created: any = await createTemplate({
         name: templateName.trim(),
+        description: templateDescription.trim(),
         pdf_path: uploadedPdfPath || 'src/inputs/sample.pdf',
         fields: fieldsDict,
       })
@@ -186,6 +187,7 @@ export function Studio() {
       const newTemplate: Template = {
         id: Number(created.id),
         name: created.name || templateName.trim(),
+        description: created.description || templateDescription.trim(),
         pdf_path: created.pdf_path || uploadedPdfPath || '',
         fields: created.fields || fieldsDict,
         field_count: created.field_count,
