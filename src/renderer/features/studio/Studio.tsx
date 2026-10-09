@@ -222,13 +222,9 @@ export function Studio() {
     setIsFilling(true)
     setStatusMessage({ text: 'Running LLM pipeline to fill document...', type: 'info' })
     try {
-      const combinedInput = templateDescription.trim()
-        ? `[FORM / TEMPLATE CONTEXT: ${templateDescription.trim()}]\n\n${narrativeText.trim()}`
-        : narrativeText.trim()
-
       const res: any = await fillTemplate({
         template_id: tplId,
-        input_text: combinedInput,
+        input_text: narrativeText.trim(),
         model: selectedModel,
       })
 
